@@ -8,11 +8,11 @@ import (
 )
 
 type Config struct {
-	Env            string        `yaml:"env" env-default:"local"`          // текущее окружение: local, dev, prod и т.п.
-	StoragePath    string        `yaml:"storage_path" env-required:"true"` // SQLite, поэтому нужно указать путь до файла, где хранится наша БД
-	GRPC           GRPCConfig    `yaml:"grpc"`                             // порт gRPC-сервиса и таймаут обработки запросов
-	MigrationsPath string        // путь до директории с миграциями БД. Он будет использоваться утилитой migrator
-	TokenTTL       time.Duration `yaml:"token_ttl" env-default:"1h"` // время жизни выдаваемых токенов авторизации
+	Env            string     `yaml:"env" env-default:"local"`
+	StoragePath    string     `yaml:"storage_path" env-required:"true"`
+	GRPC           GRPCConfig `yaml:"grpc"`
+	MigrationsPath string
+	TokenTTL       time.Duration `yaml:"token_ttl" env-default:"1h"`
 }
 
 type GRPCConfig struct {

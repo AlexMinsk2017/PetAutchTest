@@ -1,9 +1,13 @@
 package main
 
 import (
+	"github.com/AlexMinsk2017/PetAutchTest/internal/app"
 	"github.com/AlexMinsk2017/PetAutchTest/internal/config"
+	"github.com/AlexMinsk2017/PetAutchTest/internal/lib/logger/handlers/slogpretty"
 	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 )
 
 const (
@@ -13,15 +17,27 @@ const (
 )
 
 func main() {
-	//  инициализировать объект конфига
-	cfg := config.MustLoad()
 
-	//  инициализировать логер
-	log := setupLogger(cfg.Env)
+	cfg := config.MustLoad() // инициализировать объект конфига
 
-	// TODO: инициализировать приложение (app)
+	log := setupLogger(cfg.Env) // инициализировать логгер
 
-	// TODO: запустить gRPC-сервер приложения
+	application := app.New(log, cfg.GRPC.Port, cfg.StoragePath, cfg.TokenTTL) // инициализировать приложение (app)
+
+	// application.GRPCServer.MustRun() // запустить gRPC-сервер приложения
+
+	go func() {
+		application.GRPCServer.MustRun()
+	}()
+
+	// Graceful shutdown
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
+
+	<-stop
+
+	application.GRPCServer.Stop()
+	log.Info("Gracefully stopped")
 }
 
 func setupLogger(env string) *slog.Logger {
@@ -29,25 +45,30 @@ func setupLogger(env string) *slog.Logger {
 
 	switch env {
 	case envLocal:
-		// envLocal: локальный запуск — используем TextHandler, удобный для консоли,
-		// и уровень логирования Debug (т.е. будем выводить все сообщения)
 		log = slog.New(
 			slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
 		)
 	case envDev:
-		// envDev: запуск на удалённом dev-сервере — уровень логирования тот же, но формат вывода — JSON,
-		// удобный для систем сбора логов (Kibana, Grafana Loki и т.п.)
 		log = slog.New(
 			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
 		)
 	case envProd:
-		// envProd: запуск в продакшене: повышаем уровень логирования до Info — нам не нужны debug-логи в проде.
-		// Т.е. мы будем получать сообщения только с уровнем Info или Error.
 		log = slog.New(
 			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
 		)
 	}
 
 	return log
+}
 
+func setupPrettySlog() *slog.Logger {
+	opts := slogpretty.PrettyHandlerOptions{
+		SlogOpts: &slog.HandlerOptions{
+			Level: slog.LevelDebug,
+		},
+	}
+
+	handler := opts.NewPrettyHandler(os.Stdout)
+
+	return slog.New(handler)
 }

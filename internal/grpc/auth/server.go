@@ -4,24 +4,18 @@ import (
 	"context"
 	"errors"
 	"github.com/AlexMinsk2017/PetAutchTest/internal/services/auth"
-	"github.com/AlexMinsk2017/PetAutchTest/internal/storage"
+	"github.com/AlexMinsk2017/PetAutchTest/storage"
 	ssov1 "github.com/AlexMinsk2017/PetProtosTest/gen/go/sso"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-// структуру serverAPI, которая будет реализовывать функционал API
-// каркасы для двух RPC-методов, которые мы будем использовать: Login и Register (методы этой структуры serverAPI)
-// интерфейс будущего Auth из сервисного слоя — его реализацию мы напишем чуть позже, а пока достаточно интерфейса в качестве контракта
-// также здесь у нас есть функция Register, которая регистрирует эту serverAPI в gRPC-сервере
-
 type serverAPI struct {
-	ssov1.UnimplementedAuthServer // Хитрая штука, о ней ниже
-	auth                          Auth
+	ssov1.UnimplementedAuthServer
+	auth Auth
 }
 
-// Тот самый интерфейс, котрый мы передавали в grpcApp
 type Auth interface {
 	Login(
 		ctx context.Context,
@@ -34,6 +28,7 @@ type Auth interface {
 		email string,
 		password string,
 	) (userID int64, err error)
+	IsAdmin(ctx context.Context, userID int64) (bool, error)
 }
 
 func Register(gRPCServer *grpc.Server, auth Auth) {
